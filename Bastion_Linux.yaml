@@ -100,7 +100,7 @@ Resources:
             kind: ClusterConfig
 
             metadata:
-              name: TestKubernetes
+              name: RLTestKubernetes
               region: us-west-2
               version: "1.29"
               tags: {"autodelete": "no", "autostop": "no" }
@@ -126,12 +126,12 @@ Resources:
 
             #se indica el nombre del cluster
             metadata:
-              name: TestKubernetes
+              name: RLTestKubernetes
               region: us-west-2
 
             #se indican los nodegrouos donde se establecen limites de capacidad, los tamaños de las instancias y los limites para el aprovisionamiento de las instanmcias 
             nodeGroups:
-              - name: TestKubernetes--ng
+              - name: RLTestKubernetes--ng
                 privateNetworking: true
                 amiFamily: AmazonLinux2
                 minSize: 2
@@ -157,7 +157,7 @@ Resources:
 
             eksctl create cluster -f cluster.yaml
             sleep 5
-            aws eks update-kubeconfig --region us-west-2 --name TestKubernetes
+            aws eks update-kubeconfig --region us-west-2 --name RLTestKubernetes
             eksctl create nodegroup -f nodes.yaml
             sleep 5
 
