@@ -23,7 +23,7 @@ Resources:
   BastionLinuxRole:
     Type: 'AWS::IAM::Role'
     Properties:
-      RoleName: cloud-bastion-linux-role
+      RoleName: rl-cloud-bastion-linux-role
       Description: "IAM role for ssm instance"
       Path: /
       AssumeRolePolicyDocument:
@@ -53,7 +53,7 @@ Resources:
   CloudBastionLinuxInstanceProfile:
     Type: AWS::IAM::InstanceProfile
     Properties: 
-      InstanceProfileName: cloud-bastion-linux-role
+      InstanceProfileName: rl-cloud-bastion-linux-role
       Path: /
       Roles: 
        - !Ref BastionLinuxRole
