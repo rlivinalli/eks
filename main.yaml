@@ -49,7 +49,7 @@ Resources:
   KeyPair:
     Type: 'AWS::EC2::KeyPair'
     Properties:
-      KeyName: Windows-Bastion-Cloud
+      KeyName: RL-Windows-Bastion-Cloud
 
   VPC:
     Type: AWS::CloudFormation::Stack
