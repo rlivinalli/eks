@@ -1,0 +1,184 @@
+---
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Amazon EKS Sample VPC - Private and Public subnets'
+
+Parameters:
+
+  VpcId:
+    Type: String
+  InstanceType:
+    Type: String
+  SubnetId:
+    Type: String
+  ImageId:
+    Type: String
+  SubnetId1:
+    Type: String
+  SubnetId2:
+    Type: String
+
+
+Resources:
+
+  BastionLinuxRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      RoleName: cloud-bastion-linux-role
+      Description: "IAM role for ssm instance"
+      Path: /
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - ec2.amazonaws.com
+            Action:
+              - 'sts:AssumeRole'
+#      ManagedPolicyArns:
+#        - arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
+      Policies:
+        - PolicyName: 'CloudAccessPolicy'
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: 'Allow'
+                Action:
+                  - '*'
+                Resource: '*'
+#                  - 'rds:*'
+#                Resource: !GetAtt MyDBInstance.DBInstanceArn
+
+
+  CloudBastionLinuxInstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties: 
+      InstanceProfileName: cloud-bastion-linux-role
+      Path: /
+      Roles: 
+       - !Ref BastionLinuxRole
+
+  CloudBastionLinuxInstance:
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageId: !Ref ImageId
+      InstanceType: !Ref InstanceType
+      IamInstanceProfile: !Ref CloudBastionLinuxInstanceProfile
+#      KeyName: !Ref KeyName
+      Tags:
+      - Key: Name
+        Value: Cloud Bastion Linux Server
+      SecurityGroupIds:
+        - !Ref WebAppSecurityGroup
+      SubnetId:  !Ref SubnetId
+      UserData:
+        Fn::Base64:
+          !Sub |
+            #!/bin/bash
+            echo "Installing EKSCTL"
+            curl --silent --location "https://github.com/weaveworks/eksctl/releases/latest/download/eksctl_$(uname -s)_amd64.tar.gz" | tar xz -C /tmp
+            sudo mv /tmp/eksctl /usr/local/bin
+            echo "EKSCTL installed in version"
+            eksctl version
+
+            echo "Installing Helm"
+            sudo yum install -y openssl
+            curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+            echo "Helm Installed"
+            helm version
+
+            # Descarga la última versión de kubectl
+            curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+            chmod +x ./kubectl
+            sudo mv ./kubectl /usr/local/bin/kubectl
+            kubectl version --client
+
+            su ec2-user
+            cd /home/ec2-user/
+            cat << EOF > cluster.yaml
+            apiVersion: eksctl.io/v1alpha5
+            kind: ClusterConfig
+
+            metadata:
+              name: TestKubernetes
+              region: us-west-2
+              version: "1.29"
+              tags: {"autodelete": "no", "autostop": "no" }
+
+            vpc:
+              id: ${VpcId}
+              cidr: 10.9.0.0/16
+              subnets:
+                private:
+                  us-west-2a:
+                    id: ${SubnetId1}
+                  us-west-2b:
+                    id: ${SubnetId2}
+
+            cloudWatch:
+              clusterLogging:
+                enableTypes: ["*"]
+            EOF
+
+            cat << EOF > nodes.yaml
+            apiVersion: eksctl.io/v1alpha5
+            kind: ClusterConfig
+
+            #se indica el nombre del cluster
+            metadata:
+              name: TestKubernetes
+              region: us-west-2
+
+            #se indican los nodegrouos donde se establecen limites de capacidad, los tamaños de las instancias y los limites para el aprovisionamiento de las instanmcias 
+            nodeGroups:
+              - name: TestKubernetes--ng
+                privateNetworking: true
+                amiFamily: AmazonLinux2
+                minSize: 2
+                maxSize: 10
+                instancesDistribution:
+                  maxPrice: 1
+                  instanceTypes: ["t3.xlarge", "t2.xlarge"] # At least two instance types should be specified
+                  onDemandBaseCapacity: 0
+                  onDemandPercentageAboveBaseCapacity: 50
+
+                iam:
+                  withAddonPolicies:
+                    imageBuilder: true
+                    autoScaler: true
+                    externalDNS: false
+                    certManager: true
+                    appMesh: true
+                    albIngress: true
+                    xRay: true
+                    cloudWatch: true
+                tags: {"autodelete": "no", "autostop": "no" }
+            EOF
+
+            eksctl create cluster -f cluster.yaml
+            sleep 5
+            aws eks update-kubeconfig --region us-west-2 --name TestKubernetes
+            eksctl create nodegroup -f nodes.yaml
+            sleep 5
+
+
+  WebAppSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      VpcId: !Ref VpcId
+      GroupDescription: SG to allow SSH access via port 22
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: '22'
+          ToPort: '22'
+          CidrIp: '0.0.0.0/0'
+      Tags:
+        - Key: Name
+          Value: CLOUD-SSH-SG
+
+
+Outputs:
+
+  VpcId:
+    Description: The VPC Id
+    Value: !Ref VpcId

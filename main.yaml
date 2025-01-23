@@ -1,0 +1,75 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: >
+  This template defines a the main stack for a challenge.
+Parameters:
+  # Bucket path related
+  QSS3BucketName:
+    Type: String
+    Default: "infra-inmersionday"
+  VpcBlock:
+    Type: String
+    Default: 10.9.0.0/16
+    Description: The CIDR range for the VPC. This should be a valid private (RFC 1918) CIDR range.
+  PublicSubnet01Block:
+    Type: String
+    Default: 10.9.1.0/24
+    Description: CidrBlock for public subnet 01 within the VPC
+  PrivateSubnet01Block:
+    Type: String
+    Default: 10.9.2.0/24
+    Description: CidrBlock for private subnet 01 within the VPC
+  PrivateSubnet02Block:
+    Type: String
+    Default: 10.9.3.0/24
+    Description: CidrBlock for private subnet 02 within the VPC
+  LinuxInstanceType:
+    Type: String
+    Description: Choosing  t2 micro because it is free
+    Default: t2.micro
+  # LinuxImageId:
+  #   Type: String
+  #   Default: ami-04b70fa74e45c3917
+  # WindowsInstanceType:
+  #   Type: String
+  #   Description: Choosing  t2 micro because it is free
+  #   Default: t3.medium
+  # WindowsImageId:
+  #   Type: String
+  #   Default: ami-0a62069ec7788c8be
+  BastionLinuxImageId:
+    Type: String
+    Default: ami-0eb9d67c52f5c80e5
+
+    
+
+
+
+Resources:
+  # Everything that needs to be created even before player starts playing.
+  KeyPair:
+    Type: 'AWS::EC2::KeyPair'
+    Properties:
+      KeyName: Windows-Bastion-Cloud
+
+  VPC:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: !Sub 'https://${QSS3BucketName}.s3.amazonaws.com/VPC.yaml'
+      Parameters:
+        VpcBlock: !Ref VpcBlock
+        PublicSubnet01Block: !Ref PublicSubnet01Block
+        PrivateSubnet01Block: !Ref PrivateSubnet01Block
+        PrivateSubnet02Block: !Ref PrivateSubnet02Block
+
+  BastionLinux:
+    Type: AWS::CloudFormation::Stack
+    DependsOn: VPC
+    Properties:
+      TemplateURL: !Sub 'https://${QSS3BucketName}.s3.amazonaws.com/Bastion_Linux.yaml'
+      Parameters:
+        VpcId: !GetAtt VPC.Outputs.VpcId
+        InstanceType: !Ref LinuxInstanceType
+        SubnetId: !GetAtt VPC.Outputs.PublicSubnet01ID
+        ImageId: !Ref BastionLinuxImageId
+        SubnetId1: !GetAtt VPC.Outputs.PrivateSubnet01ID
+        SubnetId2: !GetAtt VPC.Outputs.PrivateSubnet02ID
