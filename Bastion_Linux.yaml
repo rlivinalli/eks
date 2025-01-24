@@ -67,7 +67,7 @@ Resources:
 #      KeyName: !Ref KeyName
       Tags:
       - Key: Name
-        Value: Cloud Bastion Linux Server
+        Value: RL Cloud Bastion Linux Server
       SecurityGroupIds:
         - !Ref WebAppSecurityGroup
       SubnetId:  !Ref SubnetId
@@ -95,7 +95,7 @@ Resources:
 
             su ec2-user
             cd /home/ec2-user/
-            cat << EOF > cluster.yaml
+            cat << EOF > rlcluster.yaml
             apiVersion: eksctl.io/v1alpha5
             kind: ClusterConfig
 
@@ -107,7 +107,7 @@ Resources:
 
             vpc:
               id: ${VpcId}
-              cidr: 10.9.0.0/16
+              cidr: 10.8.0.0/16
               subnets:
                 private:
                   us-west-2a:
@@ -120,7 +120,7 @@ Resources:
                 enableTypes: ["*"]
             EOF
 
-            cat << EOF > nodes.yaml
+            cat << EOF > rlnodes.yaml
             apiVersion: eksctl.io/v1alpha5
             kind: ClusterConfig
 
