@@ -155,10 +155,10 @@ Resources:
                 tags: {"autodelete": "no", "autostop": "no" }
             EOF
 
-            eksctl create cluster -f cluster.yaml
+            eksctl create cluster -f rlcluster.yaml
             sleep 5
             aws eks update-kubeconfig --region us-west-2 --name RLTestKubernetes
-            eksctl create nodegroup -f nodes.yaml
+            eksctl create nodegroup -f rlnodes.yaml
             sleep 5
 
 
